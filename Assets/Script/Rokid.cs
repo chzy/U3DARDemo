@@ -1,9 +1,3 @@
-//
-// Fingers Gestures
-// (c) 2015 Digital Ruby, LLC
-// Source code may be used for personal or commercial projects.
-// Source code may NOT be redistributed or sold.
-// 
 
 using UnityEngine;
 using System.Collections;
@@ -11,9 +5,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
+using ARMazGlass.Scripts.SceneSync;
+    
+
+public delegate void RokidSync(RKSyncAction sender, RKSyncState state);
 
 namespace DigitalRubyShared
 {
+    
     public class Rokid : MonoBehaviour
     {
         public GameObject m_object;
@@ -25,6 +24,8 @@ namespace DigitalRubyShared
         
         private Sprite[] asteroids;
 
+        public event RokidSync gestureCallBack;
+        
         private TapGestureRecognizer tapGesture;
         private TapGestureRecognizer doubleTapGesture;
         private TapGestureRecognizer tripleTapGesture;
@@ -43,52 +44,6 @@ namespace DigitalRubyShared
         {
             //bottomLabel.text = string.Format(text, format);
             Debug.Log(string.Format(text, format));
-        }
-
-        // private GameObject CreateAsteroid(float screenX, float screenY)
-        // {
-        //     GameObject o = GameObject.Instantiate(AsteroidPrefab) as GameObject;
-        //     o.name = "Asteroid";
-        //     SpriteRenderer r = o.GetComponent<SpriteRenderer>();
-        //     r.sprite = asteroids[UnityEngine.Random.Range(0, asteroids.Length - 1)];
-        //
-        //     if (screenX == float.MinValue || screenY == float.MinValue)
-        //     {
-        //         float x = UnityEngine.Random.Range(Camera.main.rect.min.x, Camera.main.rect.max.x);
-        //         float y = UnityEngine.Random.Range(Camera.main.rect.min.y, Camera.main.rect.max.y);
-        //         Vector3 pos = new Vector3(x, y, 0.0f);
-        //         pos = Camera.main.ViewportToWorldPoint(pos);
-        //         pos.z = o.transform.position.z;
-        //         o.transform.position = pos;
-        //     }
-        //     else
-        //     {
-        //         Vector3 pos = new Vector3(screenX, screenY, 0.0f);
-        //         pos = Camera.main.ScreenToWorldPoint(pos);
-        //         pos.z = o.transform.position.z;
-        //         o.transform.position = pos;
-        //     }
-        //
-        //     o.GetComponent<Rigidbody2D>().angularVelocity = UnityEngine.Random.Range(0.0f, 30.0f);
-        //     Vector2 velocity = UnityEngine.Random.insideUnitCircle * UnityEngine.Random.Range(0, 30.0f);
-        //     o.GetComponent<Rigidbody2D>().velocity = velocity;
-        //     float scale = UnityEngine.Random.Range(1.0f, 4.0f);
-        //     o.transform.localScale = new Vector3(scale, scale, 1.0f);
-        //     o.GetComponent<Rigidbody2D>().mass *= (scale * scale);
-        //
-        //     return o;
-        // }
-
-        private void RemoveAsteroids(float screenX, float screenY, float radius)
-        {
-            Vector3 pos = new Vector3(screenX, screenY, 0.0f);
-            pos = Camera.main.ScreenToWorldPoint(pos);
-
-            RaycastHit2D[] hits = Physics2D.CircleCastAll(pos, radius, Vector2.zero);
-            foreach (RaycastHit2D h in hits)
-            {
-                GameObject.Destroy(h.transform.gameObject);
-            }
         }
 
         private void BeginDrag(float screenX, float screenY)
@@ -133,7 +88,6 @@ namespace DigitalRubyShared
             draggingAsteroid.GetComponent<Rigidbody2D>().velocity = velocity;
             draggingAsteroid.GetComponent<Rigidbody2D>().angularVelocity = UnityEngine.Random.Range(5.0f, 45.0f);
             draggingAsteroid = null;
-
             DebugText("Long tap flick velocity: {0}", velocity);
         }
 
@@ -193,7 +147,6 @@ namespace DigitalRubyShared
             if (gesture.State == GestureRecognizerState.Ended)
             {
                 DebugText("Double tapped at {0}, {1}", gesture.FocusX, gesture.FocusY);
-                RemoveAsteroids(gesture.FocusX, gesture.FocusY, 16.0f);
             }
         }
 
@@ -226,6 +179,19 @@ namespace DigitalRubyShared
 
         private void PanGestureCallback(GestureRecognizer gesture)
         {
+            if (gesture.State == GestureRecognizerState.Began) {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.StartControl);
+            } 
+            else if (gesture.State == GestureRecognizerState.Executing)
+            {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.KeepControl);
+            }
+            else if (gesture.State == GestureRecognizerState.Ended)
+            {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.EndControl);
+            }
+
+
             if (gesture.State == GestureRecognizerState.Executing)
             {
                 DebugText("Panned, Location: {0}, {1}, Delta: {2}, {3}", gesture.FocusX, gesture.FocusY, gesture.DeltaX, gesture.DeltaY);
@@ -250,7 +216,6 @@ namespace DigitalRubyShared
                     // 打印AR世界中的3D坐标
                     Debug.Log("AR World Position: " + arWorldPosition);
                 }
-                
             }
         }
 
@@ -264,6 +229,18 @@ namespace DigitalRubyShared
 
         private void ScaleGestureCallback(GestureRecognizer gesture)
         {
+            if (gesture.State == GestureRecognizerState.Began) {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.StartControl);
+            } 
+            else if (gesture.State == GestureRecognizerState.Executing)
+            {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.KeepControl);
+            }
+            else if (gesture.State == GestureRecognizerState.Ended)
+            {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.EndControl);
+            }
+
             if (gesture.State == GestureRecognizerState.Executing)
             {
                 DebugText("Scaled: {0}, Focus: {1}, {2}", scaleGesture.ScaleMultiplier, scaleGesture.FocusX, scaleGesture.FocusY);
@@ -280,6 +257,18 @@ namespace DigitalRubyShared
 
         private void RotateGestureCallback(GestureRecognizer gesture)
         {
+            if (gesture.State == GestureRecognizerState.Began) {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.StartControl);
+            } 
+            else if (gesture.State == GestureRecognizerState.Executing)
+            {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.KeepControl);
+            }
+            else if (gesture.State == GestureRecognizerState.Ended)
+            {
+                gestureCallBack(RKSyncAction.Drag, RKSyncState.EndControl);
+            }
+
             if (gesture.State == GestureRecognizerState.Executing)
             {
                 m_object.transform.Rotate(0.0f, rotateGesture.RotationRadiansDelta * Mathf.Rad2Deg, 0.0f);
